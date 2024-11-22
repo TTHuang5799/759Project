@@ -7,7 +7,7 @@ std::vector<std::string> load_class_list()
     // Sýnýf isimleri Models dosyasýndaki text file'dan alýnýr
 
     std::vector<std::string> class_list;
-    std::ifstream ifs("Models/classes.txt");
+    std::ifstream ifs("classes.txt");
     std::string line;
     while (getline(ifs, line))
     {
@@ -22,7 +22,7 @@ void load_net(cv::dnn::Net& net, bool is_cuda)
     //Loading yolov5s onnx model
     // Eðitilmiþ Onnx modeli cekilir
 
-    auto result = cv::dnn::readNet("Models/yolov5s.onnx");
+    auto result = cv::dnn::readNet("yolov5s.onnx");
     if (is_cuda)
     {
         std::cout << "Using CUDA\n";
