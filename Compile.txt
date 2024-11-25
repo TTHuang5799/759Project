@@ -1,3 +1,5 @@
+先跑這個
 $(brew --prefix llvm)/bin/clang++ -fopenmp -o yolo_cpp yolo_object_detection.cpp `pkg-config --cflags --libs opencv4` -DMACOSX_DEPLOYMENT_TARGET=13.0
 
-./yolo_cpp video3.mp4
+然後執行
+./yolo_cpp video3.mp4 [video4.mp4]... 可以用你的影片跑跑看
