@@ -1,0 +1,3 @@
+$(brew --prefix llvm)/bin/clang++ -fopenmp -o yolo_cpp yolo_object_detection.cpp `pkg-config --cflags --libs opencv4` -DMACOSX_DEPLOYMENT_TARGET=13.0
+
+./yolo_cpp video3.mp4
