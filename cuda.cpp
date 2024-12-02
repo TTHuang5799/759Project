@@ -413,7 +413,7 @@ void process_video_multithreaded(const std::string& video_path,
         // Each thread has its own net_local
         cv::dnn::Net net_local;
         auto model_load_start = std::chrono::high_resolution_clock::now();
-        load_net(net_local);
+        load_net(net_local, is_cuda);
         auto model_load_end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> model_load_time = model_load_end - model_load_start;
 
