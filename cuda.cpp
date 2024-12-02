@@ -1,3 +1,6 @@
+// Build Command: nvcc -std=c++17 -ccbin=$(brew --prefix llvm)/bin/clang++ -Xcompiler "-fopenmp -L$(brew --prefix llvm)/lib -I$(brew --prefix llvm)/include" -DUSE_CUDA -o cuda_cpp cuda.cpp `pkg-config --cflags --libs opencv4` -lomp
+
+
 #include <fstream>
 #include <opencv2/opencv.hpp>
 #include <chrono>
