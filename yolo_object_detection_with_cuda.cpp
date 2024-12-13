@@ -10,9 +10,10 @@
 #include <condition_variable>
 #include <queue>
 #include <atomic>
+#include <thread>
 
 // Uncomment this line if compiling on a system with CUDA support
-// #define USE_CUDA
+#define USE_CUDA
 
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
@@ -38,18 +39,33 @@ bool is_integer(const std::string& s)
 }
 
 // Function to get the frame count of a video
-int get_frame_count(const std::string& video_path)
+// int get_frame_count(const std::string& video_path)
+// {
+//     cv::VideoCapture capture(video_path);
+//     if (!capture.isOpened())
+//     {
+//         std::cerr << "Error: Unable to open video file " << video_path << std::endl;
+//         return 0;
+//     }
+//     int frame_count = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_COUNT));
+//     capture.release();
+//     return frame_count;
+// }
+// Function to get the frame count and frame rate of a video
+std::pair<int, double> get_frame_count_and_fps(const std::string& video_path)
 {
     cv::VideoCapture capture(video_path);
     if (!capture.isOpened())
     {
         std::cerr << "Error: Unable to open video file " << video_path << std::endl;
-        return 0;
+        return {0, 0.0};
     }
     int frame_count = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_COUNT));
+    double fps = capture.get(cv::CAP_PROP_FPS);
     capture.release();
-    return frame_count;
+    return {frame_count, fps};
 }
+
 
 // Mutex for synchronized console output
 std::mutex cout_mutex;
@@ -247,13 +263,30 @@ void process_videos(const std::vector<std::string>& video_paths, bool is_cuda,
 {
     int num_videos = video_paths.size();
     std::vector<int> frame_counts(num_videos);
+    std::vector<double> fps_list(num_videos);
     int total_frames = 0;
 
-    // Get frame counts for each video
+    // // Get frame counts for each video
+    // for (int i = 0; i < num_videos; ++i)
+    // {
+    //     frame_counts[i] = get_frame_count(video_paths[i]);
+    //     total_frames += frame_counts[i];
+    // }
+    // Get frame counts and frame rates for each video
     for (int i = 0; i < num_videos; ++i)
     {
-        frame_counts[i] = get_frame_count(video_paths[i]);
-        total_frames += frame_counts[i];
+        std::pair<int, double> result = get_frame_count_and_fps(video_paths[i]);
+        int frame_count = result.first;
+        double fps = result.second;
+
+        frame_counts[i] = frame_count;
+        fps_list[i] = fps;
+        total_frames += frame_count;
+
+        // Print video details
+        std::cout << "Video: " << video_paths[i] << "\n";
+        std::cout << " - Frame Count: " << frame_count << "\n";
+        std::cout << " - Frame Rate: " << fps << " FPS\n";
     }
 
     // Allocate threads proportionally
@@ -307,7 +340,7 @@ void process_videos(const std::vector<std::string>& video_paths, bool is_cuda,
     omp_set_num_threads(threads_for_outer);
 
     // Launch parallel video processing
-    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(guided)
     for (int i = 0; i < num_videos; ++i)
     {
         const auto& video_path = video_paths[i];
@@ -362,7 +395,7 @@ void process_video_multithreaded(const std::string& video_path, bool is_cuda,
         }
 
         // Parallel for loop
-        #pragma omp for schedule(dynamic)
+        #pragma omp for schedule(guided)
         for (int i = 0; i < total_frames; ++i)
         {
             cv::Mat processed_frame = frames[i].clone();
@@ -464,36 +497,77 @@ int main(int argc, char** argv)
         std::cout << "Total execution time: " << total_execution_duration.count() << " seconds.\n";
     }
 
-    // Display processed frames sequentially
-    std::map<std::string, std::string> windows;
-    for (const auto& video_path : video_paths)
-    {
-        windows[video_path] = "Processed Video: " + video_path;
-        cv::namedWindow(windows[video_path], cv::WINDOW_NORMAL);
-    }
 
-    std::pair<std::string, cv::Mat> display_data;
-    while (true)
-    {
-        if (display_queue.dequeue(display_data))
-        {
-            const auto& video_path = display_data.first;
-            const auto& frame = display_data.second;
+    // std::map<std::string, std::string> windows;
+    // for (const auto& video_path : video_paths)
+    // {
+    //     windows[video_path] = "Processed Video: " + video_path;
+    //     cv::namedWindow(windows[video_path], cv::WINDOW_NORMAL);
+    //     cv::resizeWindow(windows[video_path], 640, 480); // Resize windows if needed
+    // }
 
-            if (frame.empty())
-            {
-                cv::destroyWindow(windows[video_path]);
-                windows.erase(video_path);
-                if (windows.empty())
-                    break;
-                continue;
-            }
+    // std::map<std::string, bool> finished_videos; // Track finished videos
+    // for (const auto& video_path : video_paths)
+    // {
+    //     finished_videos[video_path] = false;
+    // }
 
-            cv::imshow(windows[video_path], frame);
-            if (cv::waitKey(1) == 27) // ESC to exit
-                break;
-        }
-    }
+    // std::pair<std::string, cv::Mat> display_data;
+
+    // const std::chrono::milliseconds frame_duration(33); // 30 FPS -> ~33ms per frame
+
+    // while (true)
+    // {
+    //     bool any_video_active = false; // Check if any video is still active
+    //     auto frame_start_time = std::chrono::high_resolution_clock::now();
+
+    //     // Fetch frames for the current video
+    //     if (display_queue.dequeue(display_data))
+    //     {
+    //         for (const auto& video_path : video_paths)
+    //         {
+    //             // Iterate through all video paths and dequeue frames
+    //             if (finished_videos[video_path])
+    //                 continue;
+
+    //             if (display_data.first == video_path){
+    //                 const auto& frame = display_data.second;
+
+    //                 if (frame.empty())
+    //                 {
+    //                     cv::destroyWindow(windows[video_path]);
+    //                     finished_videos[video_path] = true; // Mark video as finished
+    //                 }else{
+    //                     cv::imshow(windows[video_path], frame);
+    //                     any_video_active = true; // At least one video is still active
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     for (const auto& video_path : video_paths)
+    //     {
+    //         if (finished_videos[video_path] == false){
+    //             any_video_active = true;
+    //         }
+    //     }
+    //     // Check if all videos are finished
+    //     if (!any_video_active)
+    //         break;
+
+    //     // Maintain a consistent 30 FPS frame rate
+    //     auto frame_end_time = std::chrono::high_resolution_clock::now();
+    //     auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end_time - frame_start_time);
+    //     if (elapsed_time < frame_duration)
+    //     {
+    //         std::this_thread::sleep_for(frame_duration - elapsed_time); // Sleep to maintain 30 FPS
+    //     }
+
+    //     // Allow the user to exit early by pressing ESC
+    //     if (cv::waitKey(1) == 27)
+    //         break;
+    // }
+
 
     return 0;
 }
